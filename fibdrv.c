@@ -60,7 +60,16 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
+    ssize_t result;
+    uint64_t start, end;
+
+    start = ktime_get_ns();
+    result = fib_sequence(*offset);
+    end = ktime_get_ns();
+
+    printk(KERN_INFO "%llu", end - start);
+
+    return result;
 }
 
 /* write operation is skipped */
