@@ -7,13 +7,18 @@
 
 #define FIB_DEV "/dev/fibonacci"
 
-int main()
+int main(int argc, char **argv)
 {
+    if (argc != 2) {
+        printf("Usage: %s <num_method>\n", argv[0]);
+        exit(1);
+    }
+
     long long sz;
 
     char buf[1];
-    char write_buf[] = "testing writing";
-    int offset = 100; /* TODO: try test something bigger than the limit */
+    /* TODO: try test something bigger than the limit */
+    int offset = 92, choice = atoi(argv[1]);
 
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
@@ -21,21 +26,11 @@ int main()
         exit(1);
     }
 
-    for (int i = 0; i <= offset; i++) {
-        sz = write(fd, write_buf, strlen(write_buf));
-        printf("Writing to " FIB_DEV ", returned the sequence %lld\n", sz);
-    }
+    sz = write(fd, "", choice);
+    printf("Writing to " FIB_DEV " with choice %d, returned the method %lld.\n",
+           choice, sz);
 
     for (int i = 0; i <= offset; i++) {
-        lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 1);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%lld.\n",
-               i, sz);
-    }
-
-    for (int i = offset; i >= 0; i--) {
         lseek(fd, i, SEEK_SET);
         sz = read(fd, buf, 1);
         printf("Reading from " FIB_DEV
