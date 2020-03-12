@@ -19,20 +19,23 @@ MODULE_VERSION("0.1");
  */
 #define MAX_LENGTH 92
 
+#define IS_VALID(c) (c == 0)
+
+static uint32_t choice;
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
-static long long fib_sequence(long long k)
+static uint64_t fib_sequence(uint64_t k)
 {
     /* FIXME: use clz/ctz and fast algorithms to speed up */
-    long long f[k + 2];
+    uint64_t f[k + 2];
 
     f[0] = 0;
     f[1] = 1;
 
-    for (int i = 2; i <= k; i++) {
+    for (uint64_t i = 2; i <= k; i++) {
         f[i] = f[i - 1] + f[i - 2];
     }
 
@@ -62,9 +65,15 @@ static ssize_t fib_read(struct file *file,
 {
     ssize_t result;
     uint64_t start, end;
+    uint64_t (*fib_compute)(uint64_t) = NULL;
+
+    if (choice == 0)
+        fib_compute = fib_sequence;
+    else
+        return -1;
 
     start = ktime_get_ns();
-    result = fib_sequence(*offset);
+    result = fib_compute(*offset);
     end = ktime_get_ns();
 
     printk(KERN_INFO "%llu", end - start);
@@ -78,7 +87,7 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    return 1;
+    return (choice = IS_VALID(size) ? size : choice);
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
@@ -158,6 +167,9 @@ static int __init init_fib_dev(void)
         rc = -4;
         goto failed_device_create;
     }
+
+    choice = 0;
+
     return rc;
 failed_device_create:
     class_destroy(fib_class);
