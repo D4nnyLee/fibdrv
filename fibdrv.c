@@ -19,13 +19,32 @@ MODULE_VERSION("0.1");
  */
 #define MAX_LENGTH 92
 
-#define IS_VALID(c) (c == 0)
+#define IS_VALID(c) (c < 2)
 
 static uint32_t choice;
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
+
+static uint64_t fib_fast_doubling(uint64_t k)
+{
+    uint64_t a = 0, b = 1;
+
+    for (uint64_t i = 1llu << 63; i; i >>= 1) {
+        uint64_t t1 = a * (2 * b - a);
+        uint64_t t2 = a * a + b * b;
+        a = t1;
+        b = t2;
+        if (k & i) {
+            t1 = a + b;
+            a = b;
+            b = t1;
+        }
+    }
+
+    return a;
+}
 
 static uint64_t fib_sequence(uint64_t k)
 {
@@ -69,6 +88,8 @@ static ssize_t fib_read(struct file *file,
 
     if (choice == 0)
         fib_compute = fib_sequence;
+    else if (choice == 1)
+        fib_compute = fib_fast_doubling;
     else
         return -1;
 
